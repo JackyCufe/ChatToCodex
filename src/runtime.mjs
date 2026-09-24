@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { loadApiKey, loadConfig, saveState } from './config.mjs';
+import { loadConfig, saveState } from './config.mjs';
+import { loadApiKeySecure, migrateLegacyCredential } from './credentials.mjs';
 import { startMcpServer } from './mcp-server.mjs';
 
 const TUNNEL_ID = /^tunnel_[0-9a-f]{32}$/;
@@ -49,7 +50,8 @@ async function healthSnapshot(base) {
 
 export async function startRuntime() {
   const config = loadConfig();
-  const apiKey = loadApiKey();
+  migrateLegacyCredential();
+  const apiKey = loadApiKeySecure();
   if (!TUNNEL_ID.test(config.tunnelId || '')) throw new Error('Run setup first: Tunnel ID is missing or invalid.');
   if (!apiKey) throw new Error('Run setup first: Tunnel API key is missing.');
 
@@ -76,7 +78,7 @@ export async function startRuntime() {
     tunnelPid: child?.pid ?? null,
     mcpUrl: mcp.url,
     tunnelId: config.tunnelId,
-    workspace: loadConfig().workspace ?? null,
+    allowedRoots: loadConfig().allowedRoots ?? null,
     healthBase,
     restarts,
     updatedAt: new Date().toISOString(),
@@ -94,7 +96,7 @@ export async function startRuntime() {
     child.once('error', (err) => process.stderr.write(`Tunnel client error: ${err.message}\n`));
     healthBase = await waitForHealthFile(healthFile);
     persist({ state: 'running' });
-    console.log(`ChatToCodex running\nMCP: ${mcp.url}\nTunnel: ${config.tunnelId}\nWorkspace: ${loadConfig().workspace ?? '(none selected yet)'}`);
+    console.log(`ChatToCodex running\nMCP: ${mcp.url}\nTunnel: ${config.tunnelId}\nAllowed roots: ${(loadConfig().allowedRoots ?? []).join(', ') || '(default home directory)'}`);
 
     child.once('exit', async (code, signal) => {
       if (stopped) return;

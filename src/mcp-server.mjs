@@ -6,36 +6,31 @@ import { spawn } from 'node:child_process';
 import { McpServer, createMcpHandler } from '@modelcontextprotocol/server';
 import { localhostHostValidation, localhostOriginValidation, toNodeHandler } from '@modelcontextprotocol/node';
 import { z } from 'zod';
-import { getWorkspace, resolveInWorkspace, setWorkspace } from './workspace.mjs';
+import { allowedRoots, resolveAllowedPath, resolveAllowedWorkdir } from './access.mjs';
 
 const text = (value) => ({ content: [{ type: 'text', text: String(value) }] });
 const error = (value) => ({ content: [{ type: 'text', text: String(value) }], isError: true });
 
 function buildServer() {
   const server = new McpServer(
-    { name: 'ChatToCodex', version: '0.1.0' },
-    { capabilities: { tools: {} }, instructions: 'ChatToCodex gives this conversation access only to the currently selected local workspace. If no workspace is selected, ask the user to select one before file or command operations.' }
+    { name: 'ChatToCodex', version: '0.2.0' },
+    {
+      capabilities: { tools: {} },
+      instructions: 'ChatToCodex gives this conversation direct access to local development tools within the configured allowed roots. File tools accept absolute or relative paths, and command execution accepts an explicit workdir. No workspace-selection step is required.'
+    }
   );
 
-  server.registerTool('workspace_status', {
-    description: 'Show the currently selected local workspace.',
+  server.registerTool('access_status', {
+    description: 'Show the local filesystem roots ChatToCodex is allowed to access.',
     inputSchema: z.object({})
-  }, async () => text(getWorkspace() ?? 'No workspace selected.'));
-
-  server.registerTool('set_workspace', {
-    description: 'Select a local directory as the active workspace. The directory must already exist on this computer.',
-    inputSchema: z.object({ path: z.string().min(1).max(4096) })
-  }, async ({ path: requested }) => {
-    try { return text(`Workspace selected: ${setWorkspace(requested)}`); }
-    catch (e) { return error(e.message); }
-  });
+  }, async () => text(allowedRoots().join('\n')));
 
   server.registerTool('list_directory', {
-    description: 'List one directory inside the active workspace.',
+    description: 'List a local directory within ChatToCodex allowed roots. Accepts an absolute path or a path relative to the first allowed root.',
     inputSchema: z.object({ path: z.string().default('.') })
-  }, async ({ path: relative }) => {
+  }, async ({ path: requested }) => {
     try {
-      const { target } = resolveInWorkspace(relative);
+      const target = resolveAllowedPath(requested);
       const entries = fs.readdirSync(target, { withFileTypes: true }).slice(0, 300)
         .map((entry) => `${entry.isDirectory() ? 'd' : 'f'} ${entry.name}`);
       return text(entries.join('\n'));
@@ -43,11 +38,11 @@ function buildServer() {
   });
 
   server.registerTool('read_file', {
-    description: 'Read a UTF-8 text file inside the active workspace.',
+    description: 'Read a UTF-8 text file within ChatToCodex allowed roots. Accepts absolute or relative paths.',
     inputSchema: z.object({ path: z.string().min(1), max_bytes: z.number().int().min(1).max(1024 * 1024).default(256 * 1024) })
-  }, async ({ path: relative, max_bytes }) => {
+  }, async ({ path: requested, max_bytes }) => {
     try {
-      const { target } = resolveInWorkspace(relative);
+      const target = resolveAllowedPath(requested);
       const stat = fs.statSync(target);
       if (!stat.isFile()) return error('Not a file');
       const fd = fs.openSync(target, 'r');
@@ -61,31 +56,35 @@ function buildServer() {
   });
 
   server.registerTool('write_file', {
-    description: 'Create or replace a UTF-8 text file inside the active workspace.',
+    description: 'Create or replace a UTF-8 text file within ChatToCodex allowed roots.',
     inputSchema: z.object({ path: z.string().min(1), content: z.string() })
-  }, async ({ path: relative, content }) => {
+  }, async ({ path: requested, content }) => {
     try {
-      const { target } = resolveInWorkspace(relative);
+      const target = resolveAllowedPath(requested);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, content, 'utf8');
-      return text(`Wrote ${Buffer.byteLength(content)} bytes to ${relative}`);
+      return text(`Wrote ${Buffer.byteLength(content)} bytes to ${target}`);
     } catch (e) { return error(e.message); }
   });
 
   server.registerTool('run_command', {
-    description: 'Run a shell command with the active workspace as cwd.',
-    inputSchema: z.object({ command: z.string().min(1).max(20000) })
-  }, async ({ command }) => {
-    const workspace = getWorkspace();
-    if (!workspace) return error('NO_WORKSPACE_SELECTED');
-    return await new Promise((resolve) => {
-      const child = spawn(process.env.SHELL || '/bin/zsh', ['-lc', command], { cwd: workspace, env: process.env });
-      let output = '';
-      const append = (chunk) => { if (output.length < 200000) output += chunk.toString(); };
-      child.stdout.on('data', append); child.stderr.on('data', append);
-      child.on('error', (e) => resolve(error(e.message)));
-      child.on('close', (code) => resolve(text(`exit ${code}\n${output}`)));
-    });
+    description: 'Run a shell command on this computer. workdir must be inside ChatToCodex allowed roots and may be any project directory; no prior workspace selection is needed.',
+    inputSchema: z.object({
+      command: z.string().min(1).max(20000),
+      workdir: z.string().min(1).max(4096).optional()
+    })
+  }, async ({ command, workdir }) => {
+    try {
+      const cwd = resolveAllowedWorkdir(workdir);
+      return await new Promise((resolve) => {
+        const child = spawn(process.env.SHELL || '/bin/zsh', ['-lc', command], { cwd, env: process.env });
+        let output = '';
+        const append = (chunk) => { if (output.length < 200000) output += chunk.toString(); };
+        child.stdout.on('data', append); child.stderr.on('data', append);
+        child.on('error', (e) => resolve(error(e.message)));
+        child.on('close', (code) => resolve(text(`exit ${code}\n${output}`)));
+      });
+    } catch (e) { return error(e.message); }
   });
 
   return server;
