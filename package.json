@@ -1,0 +1,23 @@
+{
+  "name": "chat-to-codex",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Headless bridge that connects ChatGPT/Codex to a local workspace through OpenAI Secure MCP Tunnel.",
+  "bin": {
+    "chat-to-codex": "./src/cli.mjs"
+  },
+  "scripts": {
+    "start": "node src/cli.mjs start",
+    "setup": "node src/cli.mjs setup",
+    "status": "node src/cli.mjs status",
+    "doctor": "node src/cli.mjs doctor",
+    "check": "node --check src/cli.mjs && node --check src/runtime.mjs && node --check src/mcp-server.mjs",
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/node": "^2.0.0",
+    "@modelcontextprotocol/server": "^2.0.0",
+    "zod": "^4.6.4"
+  }
+}
