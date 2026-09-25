@@ -5,21 +5,30 @@ import { spawn } from 'node:child_process';
 import { loadConfig, saveState } from './config.mjs';
 import { loadApiKeySecure, migrateLegacyCredential } from './credentials.mjs';
 import { startMcpServer } from './mcp-server.mjs';
+import { loadDotEnv } from './env.mjs';
 
 const TUNNEL_ID = /^tunnel_[0-9a-f]{32}$/;
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function findTunnelClient() {
+  const exe = process.platform === 'win32' ? 'tunnel-client.exe' : 'tunnel-client';
   const candidates = [
     process.env.TUNNEL_CLIENT_PATH,
-    '/opt/homebrew/bin/tunnel-client',
-    '/usr/local/bin/tunnel-client',
-    path.join(os.homedir(), '.local/bin/tunnel-client')
+    ...(process.platform === 'win32' ? [
+      process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'Programs', 'tunnel-client', exe),
+      process.env.LOCALAPPDATA && path.join(process.env.LOCALAPPDATA, 'tunnel-client', exe),
+      process.env.USERPROFILE && path.join(process.env.USERPROFILE, '.tunnel-client', exe),
+      process.env.USERPROFILE && path.join(process.env.USERPROFILE, 'bin', exe)
+    ] : [
+      '/opt/homebrew/bin/tunnel-client',
+      '/usr/local/bin/tunnel-client',
+      path.join(os.homedir(), '.local/bin/tunnel-client')
+    ])
   ].filter(Boolean);
   for (const candidate of candidates) {
     try { fs.accessSync(candidate, fs.constants.X_OK); return candidate; } catch {}
   }
-  return 'tunnel-client';
+  return exe;
 }
 
 async function waitForHealthFile(file, timeoutMs = 60000) {
@@ -49,10 +58,12 @@ async function healthSnapshot(base) {
 }
 
 export async function startRuntime() {
+  loadDotEnv();
   const config = loadConfig();
   migrateLegacyCredential();
   const apiKey = loadApiKeySecure();
-  if (!TUNNEL_ID.test(config.tunnelId || '')) throw new Error('Run setup first: Tunnel ID is missing or invalid.');
+  const tunnelId = process.env.OPENAI_TUNNEL_ID || config.tunnelId || '';
+  if (!TUNNEL_ID.test(tunnelId)) throw new Error('Run setup first: Tunnel ID is missing or invalid.');
   if (!apiKey) throw new Error('Run setup first: Tunnel API key is missing.');
 
   const mcp = await startMcpServer();
@@ -61,7 +72,7 @@ export async function startRuntime() {
   const tunnelBinary = findTunnelClient();
   const args = [
     'run',
-    '--control-plane.tunnel-id', config.tunnelId,
+    '--control-plane.tunnel-id', tunnelId,
     '--health.listen-addr', '127.0.0.1:0',
     '--health.url-file', healthFile,
     '--log.format', 'json',
@@ -77,7 +88,7 @@ export async function startRuntime() {
     pid: process.pid,
     tunnelPid: child?.pid ?? null,
     mcpUrl: mcp.url,
-    tunnelId: config.tunnelId,
+    tunnelId,
     allowedRoots: loadConfig().allowedRoots ?? null,
     healthBase,
     restarts,
@@ -96,7 +107,7 @@ export async function startRuntime() {
     child.once('error', (err) => process.stderr.write(`Tunnel client error: ${err.message}\n`));
     healthBase = await waitForHealthFile(healthFile);
     persist({ state: 'running' });
-    console.log(`ChatToCodex running\nMCP: ${mcp.url}\nTunnel: ${config.tunnelId}\nAllowed roots: ${(loadConfig().allowedRoots ?? []).join(', ') || '(default home directory)'}`);
+    console.log(`ChatToCodex running\nMCP: ${mcp.url}\nTunnel: ${tunnelId}\nAllowed roots: ${(loadConfig().allowedRoots ?? []).join(', ') || '(default home directory)'}`);
 
     child.once('exit', async (code, signal) => {
       if (stopped) return;

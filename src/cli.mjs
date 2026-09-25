@@ -13,6 +13,8 @@ import {
   secureStorageAvailable
 } from './credentials.mjs';
 import { startRuntime } from './runtime.mjs';
+import { loadDotEnv } from './env.mjs';
+loadDotEnv();
 
 const [, , command = 'help'] = process.argv;
 const TUNNEL_ID = /^tunnel_[0-9a-f]{32}$/;
@@ -26,7 +28,8 @@ async function setup() {
   const rl = readline.createInterface({ input, output });
   try {
     const current = loadConfig();
-    const tunnelId = (await rl.question(`Tunnel ID${current.tunnelId ? ` [${current.tunnelId}]` : ''}: `)).trim() || current.tunnelId;
+    const existingTunnel = process.env.OPENAI_TUNNEL_ID || current.tunnelId;
+    const tunnelId = (await rl.question(`Tunnel ID${existingTunnel ? ` [${existingTunnel}]` : ''}: `)).trim() || existingTunnel;
     if (!TUNNEL_ID.test(tunnelId || '')) throw new Error('Tunnel ID must be tunnel_ followed by 32 lowercase hex characters.');
     const existingKey = loadApiKeySecure();
     const apiKey = (await rl.question(`Tunnel API key${existingKey ? ' [already stored; Enter keeps it]' : ''}: `)).trim();
@@ -44,8 +47,8 @@ function status() {
   const config = loadConfig();
   const state = loadState();
   console.log(JSON.stringify({
-    configured: TUNNEL_ID.test(config.tunnelId || '') && Boolean(loadApiKeySecure()),
-    tunnelId: config.tunnelId || null,
+    configured: TUNNEL_ID.test(process.env.OPENAI_TUNNEL_ID || config.tunnelId || '') && Boolean(loadApiKeySecure()),
+    tunnelId: process.env.OPENAI_TUNNEL_ID || config.tunnelId || null,
     apiKeyStored: Boolean(loadApiKeySecure()),
     credentialBackend: credentialBackend(),
     allowedRoots: config.allowedRoots?.length ? config.allowedRoots : [os.homedir()],
@@ -57,7 +60,7 @@ function doctor() {
   prepareCredentials();
   const checks = [];
   const config = loadConfig();
-  checks.push(['Tunnel ID', TUNNEL_ID.test(config.tunnelId || '')]);
+  checks.push(['Tunnel ID', TUNNEL_ID.test(process.env.OPENAI_TUNNEL_ID || config.tunnelId || '')]);
   checks.push([`Secure credential storage (${credentialBackend()})`, secureStorageAvailable()]);
   checks.push(['API key stored', Boolean(loadApiKeySecure())]);
   const candidates = [process.env.TUNNEL_CLIENT_PATH, '/opt/homebrew/bin/tunnel-client', '/usr/local/bin/tunnel-client'].filter(Boolean);

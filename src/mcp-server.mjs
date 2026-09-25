@@ -77,7 +77,9 @@ function buildServer() {
     try {
       const cwd = resolveAllowedWorkdir(workdir);
       return await new Promise((resolve) => {
-        const child = spawn(process.env.SHELL || '/bin/zsh', ['-lc', command], { cwd, env: process.env });
+        const shell = process.platform === 'win32' ? (process.env.ComSpec || 'cmd.exe') : (process.env.SHELL || '/bin/zsh');
+        const shellArgs = process.platform === 'win32' ? ['/d', '/s', '/c', command] : ['-lc', command];
+        const child = spawn(shell, shellArgs, { cwd, env: process.env, windowsHide: true });
         let output = '';
         const append = (chunk) => { if (output.length < 200000) output += chunk.toString(); };
         child.stdout.on('data', append); child.stderr.on('data', append);
