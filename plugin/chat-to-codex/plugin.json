@@ -1,0 +1,26 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "chat-to-codex",
+  "version": "0.1.0",
+  "description": "Use ChatToCodex to work with local coding projects through a user-owned OpenAI Secure MCP Tunnel.",
+  "author": {
+    "name": "JackyCufe"
+  },
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "ChatToCodex",
+        "shortDescription": "Use local coding tools from ChatGPT",
+        "longDescription": "Connect ChatGPT conversations to your own ChatToCodex Local Host through an OpenAI Secure MCP Tunnel, then read files and run coding commands on permitted local projects.",
+        "developerName": "JackyCufe",
+        "category": "Developer Tools",
+        "capabilities": ["Interactive", "Read", "Write"],
+        "defaultPrompt": [
+          "Use ChatToCodex to inspect my local project.",
+          "Use ChatToCodex to run tests in my local repository.",
+          "Help me connect my ChatToCodex Local Host if it is not ready yet."
+        ]
+      }
+    }
+  }
+}

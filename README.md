@@ -105,6 +105,24 @@ chat-to-codex install
 
 On Windows, shell commands use `cmd.exe /d /s /c`, the API key can be protected with Windows DPAPI, and the Local Host is registered as a per-user logon task.
 
+## ChatGPT Plugin
+
+ChatToCodex also ships as a ChatGPT Plugin package. The Plugin provides the ChatGPT-side identity, onboarding workflow, and instructions for using the local MCP app.
+
+Private test plugin:
+
+- Plugin ID: `plugins_6aba29bdb3bc8191a036251ed71a7ef4`
+- Version: `0.1.0`
+- Plugin page: `https://chatgpt.com/plugins/plugins_6aba29bdb3bc8191a036251ed71a7ef4`
+
+The Plugin source lives under `plugin/chat-to-codex/`.
+
+### Why one Tunnel-binding step still exists
+
+OpenAI Secure MCP Tunnel is a private per-user/per-workspace transport. A portable Plugin package cannot embed one shared Tunnel ID for every customer. Each customer therefore performs one first-time binding in ChatGPT: create/connect the **ChatToCodex** MCP app, choose **Tunnel**, select their own Tunnel ID, and use **No Auth**. After that, the Plugin can be invoked from supported conversations while the Local Host remains available in the background.
+
+This is different from a public hosted MCP plugin, which requires a stable public HTTPS MCP endpoint. ChatToCodex intentionally keeps the coding runtime on the user's own machine.
+
 ## Diagnostics
 
 ```bash
