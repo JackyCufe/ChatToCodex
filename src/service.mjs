@@ -43,15 +43,48 @@ function macRunning() {
   return run('launchctl', ['print', `${macDomain()}/${LABEL}`]).ok;
 }
 
+function sleepSync(ms) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {}
+}
+
+function waitForMacState(expectedRunning, timeoutMs = 3000) {
+  const until = Date.now() + timeoutMs;
+  while (Date.now() < until) {
+    if (macRunning() === expectedRunning) return true;
+    sleepSync(50);
+  }
+  return macRunning() === expectedRunning;
+}
+
 function installMac({ start = true } = {}) {
   ensureHome();
   const plist = launchAgentPath();
   fs.mkdirSync(path.dirname(plist), { recursive: true });
   fs.writeFileSync(plist, launchAgentContents(), 'utf8');
-  run('launchctl', ['bootout', `${macDomain()}/${LABEL}`]);
+
+  // launchctl can return before an old job is fully retired. Re-bootstrapping the same
+  // label immediately after bootout intermittently fails with Bootstrap failed: 5 (EIO).
+  // Wait until the job actually disappears from the gui domain before loading it again.
+  if (macRunning()) {
+    run('launchctl', ['bootout', `${macDomain()}/${LABEL}`]);
+    if (!waitForMacState(false)) {
+      throw new Error('Could not retire the previous ChatToCodex LaunchAgent before reinstalling');
+    }
+  }
+
   if (start) {
     const loaded = run('launchctl', ['bootstrap', macDomain(), plist]);
-    if (!loaded.ok) throw new Error(loaded.stderr || 'Could not bootstrap ChatToCodex LaunchAgent');
+    if (!loaded.ok) {
+      // If another process loaded the same plist between our state check and bootstrap,
+      // prefer kickstart over reporting a false install failure.
+      if (macRunning()) {
+        const kicked = run('launchctl', ['kickstart', '-k', `${macDomain()}/${LABEL}`]);
+        if (!kicked.ok) throw new Error(kicked.stderr || loaded.stderr || 'Could not start ChatToCodex LaunchAgent');
+      } else {
+        throw new Error(loaded.stderr || 'Could not bootstrap ChatToCodex LaunchAgent');
+      }
+    }
   }
   return plist;
 }
