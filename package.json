@@ -13,7 +13,8 @@
     "status": "node src/cli.mjs status",
     "doctor": "node src/cli.mjs doctor",
     "check": "node --check src/cli.mjs && node --check src/runtime.mjs && node --check src/mcp-server.mjs && node --check src/config.mjs && node --check src/credentials.mjs && node --check src/access.mjs && node --check src/env.mjs && node --check src/service.mjs",
-    "test": "node test/smoke.mjs && node test/service.mjs"
+    "test": "node test/smoke.mjs && node test/service.mjs",
+    "test:package": "node test/package-install.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/node": "^2.0.0",

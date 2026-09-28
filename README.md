@@ -87,23 +87,44 @@ There is no per-chat active-workspace prerequisite. Every tool call validates it
 
 ## Windows
 
-Requirements:
+### Recommended ZIP installation
 
-1. Current Node.js (20+ recommended).
-2. OpenAI `tunnel-client.exe` on `PATH`, or `TUNNEL_CLIENT_PATH` set in `.env`.
-3. A valid OpenAI Secure MCP Tunnel ID and Restricted API key with **Tunnels: Read + Use**.
+1. Extract the entire ChatToCodex ZIP to its own folder. Do **not** run `npm install` or `npm link` from `C:\Users\<name>` unless that directory is actually the extracted ChatToCodex project.
+2. Install Node.js 20 or newer and ensure `node` / `npm` are on PATH.
+3. Make OpenAI `tunnel-client.exe` available on PATH, or later set `TUNNEL_CLIENT_PATH` in `.env`.
+4. From the extracted ChatToCodex folder, run either:
 
-PowerShell example:
+```cmd
+install-windows.cmd
+```
+
+or PowerShell:
 
 ```powershell
-git clone https://github.com/JackyCufe/ChatToCodex.git
+.\install-windows.ps1
+```
+
+The installer changes into its own project directory automatically, runs `npm install`, registers the `chat-to-codex` CLI, verifies that the command is on PATH, and prints the next step. If `npm link` fails on a particular npm release, it automatically falls back to `npm install -g <project-folder>`.
+
+Then configure and install the background host:
+
+```cmd
+chat-to-codex install
+chat-to-codex status
+```
+
+Enter the user's own OpenAI Secure MCP Tunnel ID and Restricted Tunnel API key. On Windows, the stored API key is protected with Windows DPAPI for the current user, shell commands use `cmd.exe /d /s /c`, and the Local Host is registered as a per-user Task Scheduler logon task.
+
+### Git/developer installation
+
+```powershell
+git clone <private ChatToCodex repository URL>
 cd ChatToCodex
-npm install
-npm link
+.\install-windows.ps1
 chat-to-codex install
 ```
 
-On Windows, shell commands use `cmd.exe /d /s /c`, the API key can be protected with Windows DPAPI, and the Local Host is registered as a per-user logon task.
+If `chat-to-codex` is still not found after installation, run `npm config get prefix`, add npm's global executable directory to the user PATH, reopen the terminal, and run `chat-to-codex help`.
 
 ## ChatGPT Plugin
 
