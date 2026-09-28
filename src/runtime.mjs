@@ -60,6 +60,10 @@ async function healthSnapshot(base) {
 export async function startRuntime() {
   loadDotEnv();
   const config = loadConfig();
+  if (config.paused === true) {
+    saveState({ state: 'paused', pid: process.pid, updatedAt: new Date().toISOString() });
+    return { stop: async () => {} };
+  }
   migrateLegacyCredential();
   const apiKey = loadApiKeySecure();
   const tunnelId = process.env.OPENAI_TUNNEL_ID || config.tunnelId || '';

@@ -1,70 +1,118 @@
 # ChatToCodex
 
-ChatToCodex is a headless local MCP bridge. Configure an OpenAI Secure MCP Tunnel once, keep the bridge online, and any ChatGPT conversation that can call the connector can immediately use local development tools within the configured access roots.
+ChatToCodex turns a ChatGPT custom MCP plugin into an **always-available local coding bridge**. You configure it once; after that, any ChatGPT conversation that calls ChatToCodex can use permitted local file and shell tools without first opening Electron, selecting a project instance, or starting a terminal process manually.
 
-## What it does
+## How the formal version works
 
-- No Electron runtime is required.
-- Starts a local MCP server and OpenAI `tunnel-client`.
-- No per-chat workspace-selection step is required.
-- Any ChatGPT conversation using ChatToCodex can call local file and command tools directly with a path or `workdir`.
-- Access is bounded by `allowedRoots`; the default is the current user's home directory.
-- Supports macOS, Windows, and Linux runtime paths.
+```text
+ChatGPT conversation
+        ↓
+ChatToCodex plugin / MCP app
+        ↓
+OpenAI Secure MCP Tunnel
+        ↓
+ChatToCodex Local Host (runs in the background)
+        ↓
+local files / shell / repositories
+```
 
-## Quick start
+The Local Host is what makes the plugin feel immediate. It starts with your user session and waits for ChatGPT calls; being online does **not** mean ChatGPT is continuously operating the computer. Local tools run only when a conversation actually invokes them.
+
+## One-time installation
+
+Clone/install the package, then expose the CLI (during development, `npm link` is convenient):
 
 ```bash
 npm install
-node src/cli.mjs setup
-node src/cli.mjs start
+npm link
+chat-to-codex install
 ```
 
-You can also provide the connection settings in a local `.env` file:
+`install` does two things:
+
+1. Ensures the OpenAI Tunnel ID and Tunnel API key are configured.
+2. Installs and starts the local background host.
+
+Background-host implementation:
+
+- **macOS:** per-user LaunchAgent (`launchd`)
+- **Windows:** per-user Task Scheduler task at logon
+- **Linux:** `systemd --user` service
+
+After that, add/refresh the ChatToCodex custom MCP app in ChatGPT once, select the same OpenAI Secure MCP Tunnel, and use **No Auth** for the MCP app. From then on, normal use happens entirely from ChatGPT.
+
+## Normal commands
+
+```bash
+chat-to-codex status
+chat-to-codex pause
+chat-to-codex resume
+chat-to-codex uninstall
+```
+
+- `pause` immediately stops the background host and blocks local access.
+- `resume` restores the background host.
+- `uninstall` removes only the background host; configuration and credentials remain.
+
+For development only:
+
+```bash
+chat-to-codex setup
+chat-to-codex start
+chat-to-codex doctor
+```
+
+`start` runs the Local Host in the current terminal instead of using the OS background service.
+
+## Credentials and `.env`
+
+ChatToCodex prefers a non-empty `.env` value when supplied:
 
 ```env
 OPENAI_TUNNEL_ID=tunnel_0123456789abcdef0123456789abcdef
 OPENAI_TUNNEL_API_KEY=sk-...
 ```
 
-`.env` is gitignored and must never be committed. An empty `OPENAI_TUNNEL_API_KEY` falls back to the OS credential store.
-
-## Credentials
-
-ChatToCodex uses OS-protected credential storage when the key is not supplied through `.env`:
+`.env` is gitignored and must never be committed. If the API-key entry is blank or absent, ChatToCodex uses the OS-protected credential store:
 
 - macOS: Keychain
 - Windows: DPAPI scoped to the current Windows user
-- Linux: Secret Service via `secret-tool`
+- Linux: Secret Service (`secret-tool`)
 
-Legacy `~/.chat-to-codex/credentials.json` is migrated into secure storage and then deleted.
+The Tunnel API key is only passed to OpenAI `tunnel-client`; the ChatGPT MCP app itself remains **No Auth**.
 
-The API key is only for OpenAI `tunnel-client`. The ChatGPT custom MCP app itself uses **No Auth**.
+## Local access model
+
+There is no per-chat active-workspace prerequisite. Every tool call validates its target against `allowedRoots`. The default is the current user's home directory, allowing different conversations to work on different permitted projects without switching a global project instance.
 
 ## Windows
 
 Requirements:
 
-1. Node.js 20+.
-2. OpenAI `tunnel-client.exe` on `PATH`, or set `TUNNEL_CLIENT_PATH` in `.env`.
+1. Current Node.js (20+ recommended).
+2. OpenAI `tunnel-client.exe` on `PATH`, or `TUNNEL_CLIENT_PATH` set in `.env`.
 3. A valid OpenAI Secure MCP Tunnel ID and Restricted API key with **Tunnels: Read + Use**.
 
-Example PowerShell flow:
+PowerShell example:
 
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/JackyCufe/ChatToCodex.git
 cd ChatToCodex
 npm install
-Copy-Item .env.example .env
-# Edit .env with your own Tunnel ID / API key
-node src/cli.mjs doctor
-node src/cli.mjs start
+npm link
+chat-to-codex install
 ```
 
-`run_command` uses `cmd.exe /d /s /c` on Windows and uses the requested `workdir` directly, so no Unix shell is required.
+On Windows, shell commands use `cmd.exe /d /s /c`, the API key can be protected with Windows DPAPI, and the Local Host is registered as a per-user logon task.
 
-## Access model
+## Diagnostics
 
-There is no active-workspace prerequisite. File and command tools validate their target against the configured `allowedRoots` on every call. This keeps ChatToCodex always connected while allowing any chat to address any permitted project directly.
+```bash
+chat-to-codex doctor
+chat-to-codex status
+```
+
+`doctor` checks Tunnel configuration, secure credential storage, `tunnel-client`, access roots, and background-host state.
 
 ## Development
 
@@ -75,4 +123,4 @@ npm test
 
 ## Origin
 
-This project was created after studying the MIT-licensed Chat On Steroids project and reuses architectural ideas around OpenAI Secure MCP Tunnel lifecycle and local MCP exposure. Any source copied from third-party projects must retain the relevant license notices before redistribution.
+This project was created after studying the MIT-licensed Chat On Steroids project and reuses architectural ideas around OpenAI Secure MCP Tunnel lifecycle and local MCP exposure. Any source copied or adapted from third-party projects must retain the relevant license notices before redistribution.

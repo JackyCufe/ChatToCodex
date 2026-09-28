@@ -7,7 +7,7 @@ export const configPath = path.join(homeDir, 'config.json');
 export const credentialPath = path.join(homeDir, 'credentials.json');
 export const statePath = path.join(homeDir, 'state.json');
 
-export const defaultConfig = { tunnelId: '', allowedRoots: [os.homedir()] };
+export const defaultConfig = { tunnelId: '', allowedRoots: [os.homedir()], paused: false, autostart: false };
 
 export function ensureHome() {
   fs.mkdirSync(homeDir, { recursive: true, mode: 0o700 });
