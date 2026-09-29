@@ -1,165 +1,142 @@
 # ChatToCodex
 
-ChatToCodex turns a ChatGPT custom MCP plugin into an **always-available local coding bridge**. You configure it once; after that, any ChatGPT conversation that calls ChatToCodex can use permitted local file and shell tools without first opening Electron, selecting a project instance, or starting a terminal process manually.
+Use ChatGPT or Codex conversations to work with coding projects on your own computer through an OpenAI Secure MCP Tunnel.
 
-## How the formal version works
+ChatToCodex runs a small local MCP Host on your Mac or Windows PC. After one-time setup, supported ChatGPT/Codex conversations can list/read/write files and run commands inside the local roots you allow.
 
-```text
-ChatGPT conversation
-        ↓
-ChatToCodex plugin / MCP app
-        ↓
-OpenAI Secure MCP Tunnel
-        ↓
-ChatToCodex Local Host (runs in the background)
-        ↓
-local files / shell / repositories
-```
+> ChatToCodex is an independent open-source project. It is not made, sponsored, or endorsed by OpenAI.
 
-The Local Host is what makes the plugin feel immediate. It starts with your user session and waits for ChatGPT calls; being online does **not** mean ChatGPT is continuously operating the computer. Local tools run only when a conversation actually invokes them.
+## What you get
 
-## One-time installation
+- Local MCP tools: `access_status`, `list_directory`, `read_file`, `write_file`, `run_command`.
+- No Electron app required.
+- No per-chat workspace-selection step: each tool call can address an explicit permitted path.
+- macOS background Host through LaunchAgent.
+- Windows background Host through Task Scheduler.
+- API keys stored with macOS Keychain or Windows DPAPI instead of committed to the repository.
+- `pause` / `resume` controls when the local bridge is available.
 
-Clone/install the package, then expose the CLI (during development, `npm link` is convenient):
+## Before you install
+
+Read [Requirements](docs/REQUIREMENTS.md).
+
+At a minimum you need:
+
+1. Node.js 20+ and npm.
+2. OpenAI `tunnel-client`.
+3. An OpenAI Secure MCP Tunnel ID.
+4. A Restricted runtime API key with the Tunnel permissions required to run the client.
+5. ChatGPT Developer mode / developer-mode MCP App access for the account or workspace you want to use.
+
+OpenAI's Secure MCP Tunnel is an outbound connection for private MCP servers: the local server does not need a public inbound port. The Tunnel runtime must remain healthy while ChatGPT/Codex discovers or calls the MCP tools.
+
+## Installation
+
+### macOS
 
 ```bash
+git clone https://github.com/JackyCufe/ChatToCodex.git
+cd ChatToCodex
 npm install
 npm link
 chat-to-codex install
 ```
 
-`install` does two things:
+Then follow the complete [macOS installation guide](docs/INSTALL_MAC.md).
 
-1. Ensures the OpenAI Tunnel ID and Tunnel API key are configured.
-2. Installs and starts the local background host.
+### Windows
 
-Background-host implementation:
-
-- **macOS:** per-user LaunchAgent (`launchd`)
-- **Windows:** per-user Task Scheduler task at logon
-- **Linux:** `systemd --user` service
-
-After that, add/refresh the ChatToCodex custom MCP app in ChatGPT once, select the same OpenAI Secure MCP Tunnel, and use **No Auth** for the MCP app. From then on, normal use happens entirely from ChatGPT.
-
-## Normal commands
-
-```bash
-chat-to-codex status
-chat-to-codex pause
-chat-to-codex resume
-chat-to-codex uninstall
-```
-
-- `pause` immediately stops the background host and blocks local access.
-- `resume` restores the background host.
-- `uninstall` removes only the background host; configuration and credentials remain.
-
-For development only:
-
-```bash
-chat-to-codex setup
-chat-to-codex start
-chat-to-codex doctor
-```
-
-`start` runs the Local Host in the current terminal instead of using the OS background service.
-
-## Credentials and `.env`
-
-ChatToCodex prefers a non-empty `.env` value when supplied:
-
-```env
-OPENAI_TUNNEL_ID=tunnel_0123456789abcdef0123456789abcdef
-OPENAI_TUNNEL_API_KEY=sk-...
-```
-
-`.env` is gitignored and must never be committed. If the API-key entry is blank or absent, ChatToCodex uses the OS-protected credential store:
-
-- macOS: Keychain
-- Windows: DPAPI scoped to the current Windows user
-- Linux: Secret Service (`secret-tool`)
-
-The Tunnel API key is only passed to OpenAI `tunnel-client`; the ChatGPT MCP app itself remains **No Auth**.
-
-## Local access model
-
-There is no per-chat active-workspace prerequisite. Every tool call validates its target against `allowedRoots`. The default is the current user's home directory, allowing different conversations to work on different permitted projects without switching a global project instance.
-
-## Windows
-
-### Recommended ZIP installation
-
-1. Extract the entire ChatToCodex ZIP to its own folder. Do **not** run `npm install` or `npm link` from `C:\Users\<name>` unless that directory is actually the extracted ChatToCodex project.
-2. Install Node.js 20 or newer and ensure `node` / `npm` are on PATH.
-3. Make OpenAI `tunnel-client.exe` available on PATH, or later set `TUNNEL_CLIENT_PATH` in `.env`.
-4. From the extracted ChatToCodex folder, run either:
+Download/clone the repository and extract it completely. From the ChatToCodex folder run:
 
 ```cmd
 install-windows.cmd
 ```
 
-or PowerShell:
-
-```powershell
-.\install-windows.ps1
-```
-
-The installer changes into its own project directory automatically, runs `npm install`, registers the `chat-to-codex` CLI, verifies that the command is on PATH, and prints the next step. If `npm link` fails on a particular npm release, it automatically falls back to `npm install -g <project-folder>`.
-
-Then configure and install the background host:
+Then:
 
 ```cmd
 chat-to-codex install
-chat-to-codex status
 ```
 
-Enter the user's own OpenAI Secure MCP Tunnel ID and Restricted Tunnel API key. On Windows, the stored API key is protected with Windows DPAPI for the current user, shell commands use `cmd.exe /d /s /c`, and the Local Host is registered as a per-user Task Scheduler logon task.
+See the complete [Windows installation guide](docs/INSTALL_WINDOWS.md).
 
-### Git/developer installation
+## Where do I get the Tunnel ID and API key?
 
-```powershell
-git clone <private ChatToCodex repository URL>
-cd ChatToCodex
-.\install-windows.ps1
-chat-to-codex install
-```
+Use OpenAI Platform's Secure MCP Tunnel settings:
 
-If `chat-to-codex` is still not found after installation, run `npm config get prefix`, add npm's global executable directory to the user PATH, reopen the terminal, and run `chat-to-codex help`.
+1. Create a Tunnel for the computer you are connecting.
+2. Copy its `tunnel_id` (`tunnel_...`).
+3. Create a Restricted runtime API key for the local `tunnel-client`.
+4. Make sure the relevant account/role has the required Tunnel permissions.
+5. Run `chat-to-codex install` and enter those two values locally.
 
-## ChatGPT Plugin
+Do **not** commit the API key. Do **not** paste the runtime API key into the ChatGPT MCP App authentication field.
 
-ChatToCodex also ships as a ChatGPT Plugin package. The Plugin provides the ChatGPT-side identity, onboarding workflow, and instructions for using the local MCP app.
+See [Requirements](docs/REQUIREMENTS.md) for the permission breakdown.
 
-Private test plugin:
+## Connect ChatGPT / Codex
 
-- Plugin ID: `plugins_6aba29bdb3bc8191a036251ed71a7ef4`
-- Version: `0.1.0`
-- Plugin page: `https://chatgpt.com/plugins/plugins_6aba29bdb3bc8191a036251ed71a7ef4`
-
-The Plugin source lives under `plugin/chat-to-codex/`.
-
-### Why one Tunnel-binding step still exists
-
-OpenAI Secure MCP Tunnel is a private per-user/per-workspace transport. A portable Plugin package cannot embed one shared Tunnel ID for every customer. Each customer therefore performs one first-time binding in ChatGPT: create/connect the **ChatToCodex** MCP app, choose **Tunnel**, select their own Tunnel ID, and use **No Auth**. After that, the Plugin can be invoked from supported conversations while the Local Host remains available in the background.
-
-This is different from a public hosted MCP plugin, which requires a stable public HTTPS MCP endpoint. ChatToCodex intentionally keeps the coding runtime on the user's own machine.
-
-## Diagnostics
+First make sure the local Host is running:
 
 ```bash
 chat-to-codex doctor
 chat-to-codex status
 ```
 
-`doctor` checks Tunnel configuration, secure credential storage, `tunnel-client`, access roots, and background-host state.
+Then in ChatGPT Developer mode:
+
+1. Open Plugins and create a developer-mode MCP App.
+2. Choose **Tunnel**.
+3. Select your Tunnel or paste your `tunnel_id`.
+4. Recommended app name: **ChatToCodex Core**.
+5. Use **No Auth** for the ChatToCodex MCP App.
+6. Create the connection and review the discovered tools.
+
+After the connection exists, add/select it in a supported ChatGPT/Codex conversation and try a harmless read or `git status` first.
+
+## Normal commands
+
+```bash
+chat-to-codex status
+chat-to-codex doctor
+chat-to-codex pause
+chat-to-codex resume
+chat-to-codex uninstall
+```
+
+`uninstall` removes the background Host but keeps the local configuration/credential data unless you remove those separately.
+
+## Security model
+
+By default, ChatToCodex permits paths under the current user's home directory. Every filesystem/command request is checked against configured `allowedRoots`.
+
+The Local Host being online does not mean ChatGPT is continuously operating your computer. Tools execute when a supported conversation invokes them. Use `chat-to-codex pause` whenever you want the bridge offline.
+
+Treat `write_file` and `run_command` as powerful local capabilities. Review the requested action before allowing destructive work.
+
+## Documentation
+
+- [Requirements](docs/REQUIREMENTS.md)
+- [Install on macOS](docs/INSTALL_MAC.md)
+- [Install on Windows](docs/INSTALL_WINDOWS.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 ## Development
 
 ```bash
 npm run check
 npm test
+npm run test:package
 ```
 
-## Origin
+The package test verifies that the CLI and Windows installers are included while the real `.env` is excluded.
 
-This project was created after studying the MIT-licensed Chat On Steroids project and reuses architectural ideas around OpenAI Secure MCP Tunnel lifecycle and local MCP exposure. Any source copied or adapted from third-party projects must retain the relevant license notices before redistribution.
+## Plugin package
+
+This repository also contains the ChatToCodex skill/plugin source under `plugin/chat-to-codex/` for development/testing. The GitHub repository being public does **not** automatically publish that plugin to OpenAI's public Plugin Directory.
+
+Secure MCP Tunnel is intended for private MCP connectivity. Users create/connect their own developer-mode MCP App to their own Tunnel.
+
+## License
+
+ChatToCodex is released under the [MIT License](LICENSE). See [Third-party notices](THIRD_PARTY_NOTICES.md).
