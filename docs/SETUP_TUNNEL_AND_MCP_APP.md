@@ -1,9 +1,5 @@
 # 配置 Tunnel、API Key 和 ChatGPT MCP App
 
-本指南带你完成 ChatToCodex 首次连接。文中的 **Channel ID** 如果你指的是 OpenAI Secure MCP Tunnel 的标识，官方名称是 **Tunnel ID**，格式为 `tunnel_` 加 32 位小写十六进制字符。请使用 Tunnel ID，不要与 API Key 混淆。
-
-> ChatToCodex 是独立开源项目，并非 OpenAI 官方产品。ChatGPT 的 MCP App、Developer mode 和 Secure MCP Tunnel 可用性取决于账号、套餐和工作区管理员设置。界面名称也可能随 ChatGPT 更新而变化。
-
 ## 你需要准备什么
 
 - 已安装 Node.js 20+、npm 和 OpenAI `tunnel-client`。
@@ -13,26 +9,24 @@
 
 ## 1. 创建 Tunnel 并复制 Tunnel ID
 
-1. 登录 [OpenAI Platform](https://platform.openai.com/) 并打开 Secure MCP Tunnel 设置。
-2. 创建一个 Tunnel，名称可以写成 `ChatToCodex-你的电脑名称`，方便以后辨认。
+1. 登录 [OpenAI Platform](https://platform.openai.com/) 并打开 Secure MCP Tunnel 设置。![image-20260929105921385](assets/setup-guide/image-20260929105921385.png)![image-20260929110058018](assets/setup-guide/image-20260929110058018.png)
+2. 创建一个 Tunnel，名称可以写成 `ChatToCodex-你的电脑名称`，方便以后辨认。![image-20260929110352505](assets/setup-guide/image-20260929110352505.png)
 3. 创建完成后复制它的 **Tunnel ID**。它看起来像这样：
 
    ```text
    tunnel_0123456789abcdef0123456789abcdef
    ```
 
-4. 把 Tunnel ID 暂时放在自己安全的位置。它不是 API Key，但仍建议只用于你自己的配置。
+   ![image-20260929110542128](assets/setup-guide/image-20260929110542128.png)
 
-> 截图待补：Platform 中 Tunnel 设置入口、创建 Tunnel 的页面、Tunnel ID 所在位置。
+4. 把 Tunnel ID 暂时放在自己安全的位置。它不是 API Key，但仍建议只用于你自己的配置。
 
 ## 2. 创建 Restricted runtime API Key
 
-1. 在 OpenAI Platform 的 API Keys 页面创建一个新的 **Restricted** API Key。
-2. 为本机 `tunnel-client` 授予运行 Tunnel 所需权限：**Tunnels Read** 和 **Tunnels Use**。
+1. 在 OpenAI Platform 的 API Keys 页面创建一个新的 **Restricted** API Key。![image-20260929110805129](assets/setup-guide/image-20260929110805129.png)
+2. 为本机 `tunnel-client` 授予运行 Tunnel 所需权限：**Tunnels Read** 和 **Tunnels Use**。![image-20260929110933239](assets/setup-guide/image-20260929110933239.png)
 3. 创建后立即复制并妥善保管。完整 Key 通常只会显示一次；如果丢失，请创建新 Key。
 4. 这个 Key 是本机 Tunnel runtime 使用的凭据。**不要把它填进 ChatGPT MCP App，也不要提交到 Git、截图或公开聊天中。**
-
-> 截图待补：Restricted API Key 创建页面及权限选择。请遮住 Key 的完整值、账号敏感信息和其他凭据。
 
 权限名或 Platform 页面若有变化，请以当前 OpenAI Platform 中显示的 Tunnel 权限说明为准；不要为了让连接成功而给 Key 添加无关权限。
 
@@ -53,6 +47,8 @@ chat-to-codex install
 
 ChatToCodex 会把 Tunnel ID 保存在本机配置中，并将 API Key 存入 macOS Keychain 或 Windows Credential/DPAPI 存储。安装过程会设置本机后台 Host；macOS 使用 LaunchAgent。
 
+![image-20260929111655170](assets/setup-guide/image-20260929111655170.png)
+
 随后检查状态：
 
 ```bash
@@ -60,34 +56,30 @@ chat-to-codex doctor
 chat-to-codex status
 ```
 
-继续之前，确认诊断显示 Tunnel ID 有效、API Key 已存储、后台 Host 已安装并运行。创建 MCP App 和扫描工具时，本机 Host 与 `tunnel-client` 必须保持在线。
-
-> 截图待补：安装时输入 Tunnel ID 的提示、隐藏 API Key 的提示、`doctor` 和 `status` 的成功示例。示例输出中的 Tunnel ID 可打码。
+![image-20260929111755994](assets/setup-guide/image-20260929111755994.png)继续之前，确认诊断显示 Tunnel ID 有效、API Key 已存储、后台 Host 已安装并运行。创建 MCP App 和扫描工具时，本机 Host 与 `tunnel-client` 必须保持在线。
 
 ## 4. 在 ChatGPT 创建 MCP App
 
-使用 ChatGPT 网页版，并确认账号/工作区已允许 Developer mode 和自定义 MCP App。若看不到相关选项，请联系工作区管理员或确认当前套餐是否支持。
+使用 ChatGPT 网页版，网址https://chatgpt.com/plugins。
 
-1. 打开 ChatGPT **Settings（设置）**，进入 **Apps（应用）**；也可以从工作区设置中的 **Apps → Create（创建）**进入，具体入口可能因工作区而异。
-2. 启用或选择 Developer mode，然后选择创建自定义 App/MCP App。
-3. 输入名称，例如 `ChatToCodex Core`。
-4. 连接方式选择 **Tunnel**。
-5. 选择刚创建的 Tunnel，或粘贴本机配置使用的同一个 **Tunnel ID**。
-6. 对 ChatToCodex MCP App 选择 **No Auth**（无身份验证）。Tunnel runtime API Key 已由本机 `tunnel-client` 使用，不要放进此处。
-7. 选择 **Scan Tools**。等待扫描完成，检查发现的工具，然后创建 App。
+1. 点击右上角 **Add**，选择 **MCP App**。![image-20260929112040065](assets/setup-guide/image-20260929112040065.png)
+2. 输入名称，例如 `ChatToCodex Core`。
+3. 连接方式选择 **Tunnel**。
+4. 选择刚创建的 Tunnel，或粘贴本机配置使用的同一个 **Tunnel ID**。
+5. 对 ChatToCodex MCP App 选择 **No Auth**（无身份验证）。Tunnel runtime API Key 已由本机 `tunnel-client` 使用，不要放进此处。![image-20260929112751601](assets/setup-guide/image-20260929112751601.png)
+6. 选择 **Scan Tools**。等待扫描完成，检查发现的工具，然后创建 App。![image-20260929112821546](assets/setup-guide/image-20260929112821546.png)
 
 ChatToCodex 会提供本地文件和命令工具，例如 `access_status`、`list_directory`、`read_file`、`write_file` 和 `run_command`。请在启用前检查工作区显示的工具权限。
 
-> 截图待补：Developer mode、创建 MCP App、Tunnel 连接方式、选择 Tunnel、No Auth、Scan Tools 结果。截图中请遮住 ID、Key、邮箱和组织信息。
-
 ## 5. 在对话中连接并做安全验证
 
-1. 在 ChatGPT 网页版开启一个新对话。
-2. 从工具/App 选择器中选择 `ChatToCodex Core`。如果刚创建的 App 尚未出现在列表，先检查它是否已创建/启用，并确认 Tunnel 在线。
-3. 先执行低风险检查，例如调用 `access_status`、列出你明确允许访问的测试目录，或在测试仓库中运行 `git status`。
-4. 只有在确认目标路径和内容后，再测试写入或命令执行。
+0. 使用插件之前：无法直接通过chat模式直接改代码![image-20260929113243328](assets/setup-guide/image-20260929113243328.png)
 
-`write_file` 和 `run_command` 可以更改本机文件或运行命令。不要在不理解目标和影响时批准操作；需要让本机 Host 离线时运行：
+1. 在 ChatGPT 模式下开启一个新对话，选择刚刚创建好的插件![image-20260929113413599](assets/setup-guide/image-20260929113413599.png)
+2. 然后就可以直接试着修改了![image-20260929113518663](assets/setup-guide/image-20260929113518663.png)
+3. 最终执行成功，并且走的是网页版额度![image-20260929114004929](assets/setup-guide/image-20260929114004929.png)
+
+如果你想暂停这个插件，可以运行
 
 ```bash
 chat-to-codex pause
@@ -99,6 +91,8 @@ chat-to-codex pause
 chat-to-codex resume
 ```
 
+目前在每个会话中需要调用这个插件。
+
 ## 常见问题
 
 ### 安装时提示 Tunnel ID 无效
@@ -108,14 +102,6 @@ chat-to-codex resume
 ### `doctor` 显示 API key 未存储
 
 重新运行 `chat-to-codex install` 并输入有效的 Restricted runtime API Key。若 Key 已撤销或权限不足，请在 Platform 创建/配置新的 Key。
-
-### Scan Tools 找不到工具
-
-先运行 `chat-to-codex doctor` 和 `chat-to-codex status`，确认 Host 在线、Tunnel ID 与 ChatGPT 中选择的 Tunnel 相同，并检查 API Key 是否有 Tunnels Read + Use 权限。
-
-### 找不到 Developer mode 或创建 App 的入口
-
-Developer mode 和自定义 MCP App 会受套餐、工作区管理员策略和账号权限影响。请使用 ChatGPT 网页版，并联系管理员确认权限；当前可用条件请查看 [OpenAI Developer mode and MCP apps 文档](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt)。
 
 ## 官方参考
 
