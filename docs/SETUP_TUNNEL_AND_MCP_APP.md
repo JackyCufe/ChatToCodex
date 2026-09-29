@@ -3,6 +3,7 @@
 ## 你需要准备什么
 
 - 已安装 Node.js 20+、npm 和 OpenAI `tunnel-client`。
+- OpenAI `tunnel-client` 公开仓库：[github.com/openai/tunnel-client](https://github.com/openai/tunnel-client)（包含客户端源码、发布版本和安装说明）。
 - 一个可使用 Secure MCP Tunnel 的 OpenAI Platform 组织。
 - 一个有权限创建或使用开发者 MCP App 的 ChatGPT 账号/工作区。
 - 创建 Tunnel 所需的 **Tunnels Read + Manage** 权限；运行 Tunnel 和连接时需要 **Tunnels Read + Use** 权限。
@@ -78,14 +79,13 @@ ChatToCodex 会提供本地文件和命令工具，例如 `access_status`、`lis
 1. 在 ChatGPT 模式下开启一个新对话，选择刚刚创建好的插件![image-20260929113413599](assets/setup-guide/image-20260929113413599.png)
 2. 然后就可以直接试着修改了![image-20260929113518663](assets/setup-guide/image-20260929113518663.png)
 3. 最终执行成功，并且走的是网页版额度![image-20260929114004929](assets/setup-guide/image-20260929114004929.png)
-
-如果你想暂停这个插件，可以运行
+4. 如果你想暂停这个插件，可以运行
 
 ```bash
 chat-to-codex pause
 ```
 
-恢复连接：
+5. 恢复连接：
 
 ```bash
 chat-to-codex resume

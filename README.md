@@ -1,5 +1,7 @@
 # ChatToCodex
 
+> **Reference project:** ChatToCodex was developed with [Chat On Steroids](https://github.com/totec448-spec/chat-on-steroids) as a reference. This project is independent; the reference does not imply affiliation or endorsement.
+
 Use ChatGPT or Codex conversations to work with coding projects on your own computer through an OpenAI Secure MCP Tunnel.
 
 ChatToCodex runs a small local MCP Host on your Mac or Windows PC. After one-time setup, supported ChatGPT/Codex conversations can list/read/write files and run commands inside the local roots you allow.
