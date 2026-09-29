@@ -42,7 +42,7 @@ npm link
 chat-to-codex install
 ```
 
-Then follow the complete [macOS installation guide](docs/INSTALL_MAC.md).
+Then follow the complete [macOS installation guide](docs/INSTALL_MAC.md) and the [Tunnel, API key, and MCP App walkthrough](docs/SETUP_TUNNEL_AND_MCP_APP.md).
 
 ### Windows
 
@@ -118,6 +118,7 @@ Treat `write_file` and `run_command` as powerful local capabilities. Review the 
 
 - [Requirements](docs/REQUIREMENTS.md)
 - [Install on macOS](docs/INSTALL_MAC.md)
+- [Configure Tunnel, API Key, and ChatGPT MCP App](docs/SETUP_TUNNEL_AND_MCP_APP.md)
 - [Install on Windows](docs/INSTALL_WINDOWS.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 

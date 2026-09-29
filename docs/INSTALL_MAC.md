@@ -1,5 +1,7 @@
 # Install on macOS
 
+For a detailed walkthrough with screenshot placeholders, see [Configure Tunnel, API Key, and ChatGPT MCP App](SETUP_TUNNEL_AND_MCP_APP.md).
+
 ## 1. Prepare OpenAI Secure MCP Tunnel
 
 Open OpenAI Platform Tunnel settings and create a Tunnel for this Mac. Give it a recognizable name such as `ChatToCodex-Jacky-Mac`.
